@@ -4,13 +4,15 @@ import sys
 import wikipedia as wp
 import pywikibot as pw
 
-from typing import List
+from typing import List, Set
 from wikipedia.exceptions import WikipediaException
+from wikipedia import WikipediaPage
 
 NO_ITERATIONS = 10
 SEED_ENTITIES = [
     "stone age flint arrowhead",
     "genius", "archery", "python", "java", "star wars", "movie", "apple", "pear"]
+SEED_ENTITIES = ["Iron Age"]
 SITE = pw.Site("en", "wikipedia")
 
 
@@ -29,6 +31,8 @@ def _retrieve_article(entity: str) -> str:
     """
         Retrieves the best article matched for a given an entity
     """
+    # TODO: I think at this point we might need to keep track of redirecting links
+    # and maybe consider a synonimy relationship for them
     candidates = _get_search_candidates(entity)
     for candidate in candidates:
         needs_retry = True
@@ -44,7 +48,8 @@ def _retrieve_article(entity: str) -> str:
     return None
 
 
-def _extract_fgcc(article):
+def _extract_fgcc(article: WikipediaPage) -> List[str]:
+    # TODO: change the logic of this to enable tight category structure (>2 counts per category)
     global SITE
 
     # return article.categories
@@ -55,7 +60,7 @@ def _extract_fgcc(article):
     ]
 
 
-def matching(seed_entities: List[str]):
+def matching(seed_entities: List[str]) -> List[WikipediaPage]:
     P = []
     for entity in seed_entities:
         p = _retrieve_article(entity)
@@ -64,23 +69,34 @@ def matching(seed_entities: List[str]):
     return P
 
 
-def classification(P):
+def classification(P: List[WikipediaPage]) -> Set[str]:
     L = set()
     for p in P:
         L.update(set(_extract_fgcc(p)))
     return L
 
 
-def expansion():
-    pass
+def expansion(articles: List[WikipediaPage], fgcs: Set[str]) -> List[str]:
+    HL = set()
+    for article in articles:
+        HL.update(set(article.links))
+    external_entities = [wp.Page(hl) for hl in HL]
+
+    ret = set()
+    for hl in HL:
+        p = wp.page(hl)
+        p_fgcs = set(_extract_fgcc(p))
+        if len(fgcs.intersection(p_fgcs)) > 0:
+            ret.add(hl)
+    return hl
 
 
 for itr in range(NO_ITERATIONS):
-    # matching()
-    # classification()
-    expansion()
+    # P = matching()
+    # L = classification()
+    # expansion(P, L)
 
-# THE NEXT SECTION WILL PROBABLY NEED SOME CLEANING UP
+    # THE NEXT SECTION WILL PROBABLY NEED SOME CLEANING UP
 
 print(matching(SEED_ENTITIES))
 res = classification(matching(SEED_ENTITIES))
