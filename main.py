@@ -2,12 +2,16 @@
 import sys
 
 import wikipedia as wp
+import pywikibot as pw
 
 from typing import List
 from wikipedia.exceptions import WikipediaException
 
 NO_ITERATIONS = 10
-SEED_ENTITIES = ["stone age flint arrowhead", "genius"]
+SEED_ENTITIES = [
+    "stone age flint arrowhead",
+    "genius", "archery", "python", "java", "star wars", "movie", "apple", "pear"]
+SITE = pw.Site("en", "wikipedia")
 
 
 def _get_search_candidates(s: str) -> List[str]:
@@ -40,7 +44,18 @@ def _retrieve_article(entity: str) -> str:
     return None
 
 
-def matching(seed_entities):
+def _extract_fgcc(article):
+    global SITE
+
+    # return article.categories
+    return [
+        cat.title().split(":")[1]
+        for cat in pw.Page(SITE, article.title).categories()
+        if "hidden" not in cat.categoryinfo
+    ]
+
+
+def matching(seed_entities: List[str]):
     P = []
     for entity in seed_entities:
         p = _retrieve_article(entity)
@@ -49,8 +64,11 @@ def matching(seed_entities):
     return P
 
 
-def classification():
-    pass
+def classification(P):
+    L = set()
+    for p in P:
+        L.update(set(_extract_fgcc(p)))
+    return L
 
 
 def expansion():
@@ -59,8 +77,14 @@ def expansion():
 
 for itr in range(NO_ITERATIONS):
     # matching()
-    classification()
+    # classification()
     expansion()
 
+# THE NEXT SECTION WILL PROBABLY NEED SOME CLEANING UP
 
 print(matching(SEED_ENTITIES))
+res = classification(matching(SEED_ENTITIES))
+for cat in res:
+    print(cat)
+print("N_CATEGORIES:")
+print(len(res))
