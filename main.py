@@ -11,10 +11,11 @@ from wikipedia.exceptions import WikipediaException
 from wikipedia import WikipediaPage
 from seeds import SEED_ENTITIES
 
-NO_ITERATIONS = 1
+NO_ITERATIONS = 3
 SITE = pw.Site("en", "wikipedia")
 clarifier = {
     "european": "Europe",
+    "nam": "Vietnam War",
 }
 
 
@@ -42,7 +43,7 @@ def expansion(articles: List[WikipediaPage], fgcs: Set[str]) -> List[str]:
     HL = set(random.sample(HL, N_SAMPLE))
 
     ret = set()
-    print(HL)
+    print(list(HL))
     for hl in HL:
         p = _fetch_page(hl)
         p_fgcs = set(_extract_fgcc(p))
@@ -60,9 +61,12 @@ def _retrieve_article(entity: str) -> str:
     candidates = _get_search_candidates(entity)
     for candidate in candidates:
         p = _fetch_page(candidate)
+        if p == None:
+            continue
         if p.title.lower() == candidate.lower():
             return p
-    return None
+    last_candidate = clarify(candidates[-1])
+    return _fetch_page(last_candidate)
 
 
 def _get_search_candidates(s: str) -> List[str]:
@@ -94,23 +98,36 @@ def _fetch_page(page_name: str) -> WikipediaPage:
 def _extract_fgcc(article: WikipediaPage) -> List[str]:
     # TODO: change the logic of this to enable tight category structure (>2 counts per category)
     global SITE
+    ret = []
+    if article == None:
+        return []
+    for cat in pw.Page(SITE, article.title).categories():
+        if cat == None:
+            continue
+        if "hidden" not in cat.categoryinfo:
+            ret.append(cat.title().split(":")[1])
 
-    # return article.categories
-    return [
-        cat.title().split(":")[1]
-        for cat in pw.Page(SITE, article.title).categories()
-        if "hidden" not in cat.categoryinfo
-    ]
+    return ret
 
 
 def clarify(entity):
     global clarifier
-    if entity in clarifier.keys():
+    if entity.lower() in clarifier.keys():
         return clarifier[entity]
     return entity
 
-# __________________________ MAIN _______________________________
 
+# __________________________ MAIN _______________________________
+ALL_ENTITIES = set()
+
+
+def update_all_entities(entities):
+    global ALL_ENTITIES
+    for entity in entities:
+        ALL_ENTITIES.add(entity)
+
+
+update_all_entities(SEED_ENTITIES)
 
 for _ in range(NO_ITERATIONS):
     P = matching(SEED_ENTITIES)
@@ -119,15 +136,20 @@ for _ in range(NO_ITERATIONS):
     print()
     L = classification(P)
     print("L:")
-    print(L)
+    print(list(L))
     print()
     HL = expansion(P, L)
     print("HL:")
     print(HL)
     print("-" * 30)
-    pass
+    SEED_ENTITIES = list(set(L))
+    update_all_entities(L)
 
 # THE NEXT SECTION WILL PROBABLY NEED SOME CLEANING UP
+
+print("ENDDDDDDD")
+print("-" * 40)
+print(ALL_ENTITIES)
 
 sys.exit(0)
 
