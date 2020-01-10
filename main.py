@@ -9,13 +9,13 @@ import pywikibot as pw
 from typing import List, Set
 from wikipedia.exceptions import WikipediaException
 from wikipedia import WikipediaPage
+from seeds import SEED_ENTITIES
 
 NO_ITERATIONS = 1
-SEED_ENTITIES = [
-    "stone age flint arrowhead",
-    "genius", "archery", "python", "java", "star wars", "movie", "apple", "pear"]
-SEED_ENTITIES = ["arrowhead", "arrow", "archery"]
 SITE = pw.Site("en", "wikipedia")
+clarifier = {
+    "european": "Europe",
+}
 
 
 def matching(seed_entities: List[str]) -> List[WikipediaPage]:
@@ -101,6 +101,15 @@ def _extract_fgcc(article: WikipediaPage) -> List[str]:
         for cat in pw.Page(SITE, article.title).categories()
         if "hidden" not in cat.categoryinfo
     ]
+
+
+def clarify(entity):
+    global clarifier
+    if entity in clarifier.keys():
+        return clarifier[entity]
+    return entity
+
+# __________________________ MAIN _______________________________
 
 
 for _ in range(NO_ITERATIONS):
